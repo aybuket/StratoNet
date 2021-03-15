@@ -1,3 +1,4 @@
+import NasaConnection.NasaApodConnection;
 import NasaConnection.NasaInsightWeatherConnection;
 
 public class Main {
@@ -5,7 +6,8 @@ public class Main {
     {
         // StratoNetServer server = new StratoNetServer(StratoNetServer.DEFAULT_SERVER_PORT);
         // NasaApodConnection connection = new NasaApodConnection();
-        NasaInsightWeatherConnection connection = new NasaInsightWeatherConnection();
+        new NasaInsightWeatherConnection();
+        new NasaApodConnection().downloadImage();
         System.out.println("End.");
     }
 }
