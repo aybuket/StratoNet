@@ -1,5 +1,4 @@
 import Common.Request;
-import Types.Apod;
 
 import java.io.*;
 import java.net.Socket;
@@ -15,6 +14,7 @@ public class StratoNetClient {
     protected ObjectInputStream inputStream;
     protected String serverAddress;
     protected int serverPort;
+    protected int filePort;
 
 
     public StratoNetClient(String address, int port)
@@ -73,5 +73,10 @@ public class StratoNetClient {
         {
             e.printStackTrace();
         }
+    }
+
+    public void addFilePort(int port)
+    {
+        this.filePort = port;
     }
 }

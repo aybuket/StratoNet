@@ -3,7 +3,7 @@ import java.net.*;
 
 public class StratoNetServer {
 
-    private ServerSocket serverSocket;
+    protected ServerSocket serverSocket;
     public static final int DEFAULT_SERVER_PORT = 4444;
 
     public StratoNetServer(int port)
@@ -24,14 +24,14 @@ public class StratoNetServer {
         }
     }
 
-    private void ListenAndAccept()
+    protected void ListenAndAccept()
     {
         Socket s;
         try
         {
             s = serverSocket.accept();
             System.out.println("[StratoNetServer.ListenAndAccept]: A connection was established with a client on the address of " + s.getRemoteSocketAddress());
-            ServerConnection st = new ServerConnection(s);
+            ServerThread st = new ServerThread(s);
             st.start();
         }
         catch (Exception e)

@@ -18,30 +18,14 @@ public class ConvertFromJson {
             String key = parts[0].trim().replace("\"", "");
             String value = parts[1].trim().replace("\"", "");
             switch (key) {
-                case "copyright":
-                    apodResponse.setCopyright(value);
-                    break;
-                case "date":
-                    apodResponse.setDate(value);
-                    break;
-                case "explanation":
-                    apodResponse.setExplanation(value);
-                    break;
-                case "hdurl":
-                    apodResponse.setHdurl(value);
-                    break;
-                case "media_type":
-                    apodResponse.setMediaType(value);
-                    break;
-                case "service_version":
-                    apodResponse.setServiceVersion(value);
-                    break;
-                case "title":
-                    apodResponse.setTitle(value);
-                    break;
-                case "url":
-                    apodResponse.setUrl(value);
-                    break;
+                case "copyright" -> apodResponse.setCopyright(value);
+                case "date" -> apodResponse.setDate(value);
+                case "explanation" -> apodResponse.setExplanation(value);
+                case "hdurl" -> apodResponse.setHdurl(value);
+                case "media_type" -> apodResponse.setMediaType(value);
+                case "service_version" -> apodResponse.setServiceVersion(value);
+                case "title" -> apodResponse.setTitle(value);
+                case "url" -> apodResponse.setUrl(value);
             }
         }
         return apodResponse;
@@ -52,69 +36,67 @@ public class ConvertFromJson {
         InsightWeather insightWeatherResponse = new InsightWeather();
         for (Object key : obj.keySet()) {
             switch (key.toString()) {
-                case "sol_keys":
-                    insightWeatherResponse.setSolKeys(JsonArrayToArray.convertToStringArray((JSONArray) obj.get(key)));
-                    break;
-                case "validity_checks":
-                    insightWeatherResponse.setValidityCheck(extractValidityCheck((JSONObject) obj.get(key)));
-                    break;
-                default:
-                    JSONObject value = (JSONObject) obj.get(key);
-                    JSONObject pre = (JSONObject) value.getOrDefault("PRE", null);
-                    PREValue[] preValues = {PREValue.av, PREValue.ct, PREValue.mn, PREValue.mx};
-                    JSONObject wdMostCommon = (JSONObject) value.get("WD");
-
-                    if (pre != null)
-                    {
-                        preValues[0].setValue((double)pre.getOrDefault("av",null));
-                        preValues[1].setValue((double)(long)pre.getOrDefault("ct",null));
-                        preValues[2].setValue((double)pre.getOrDefault("mn",null));
-                        preValues[3].setValue((double)pre.getOrDefault("mx",null));
-                    }
-
-                    Sol sol = new Sol(key.toString(),
-                            (String)value.getOrDefault("First_UTC", null),
-                            (String)value.getOrDefault("Last_UTC", null),
-                            (int)(long)value.getOrDefault("Month_ordinal", null),
-                            (String)value.getOrDefault("Northern_season", null),
-                            preValues,
-                            (String)value.getOrDefault("Season", null),
-                            (String)value.getOrDefault("Southern_season", null),
-                            (String)wdMostCommon.getOrDefault("most_common", null));
-
-                    insightWeatherResponse.addSol(sol);
+                case "sol_keys" -> insightWeatherResponse.setSolKeys(JsonArrayToArray.convertToStringArray((JSONArray) obj.get(key)));
+                case "validity_checks"-> insightWeatherResponse.setValidityCheck(extractValidityCheck((JSONObject) obj.get(key)));
+                default -> insightWeatherResponse.addSol(extractSol(key, obj));
             }
         }
         return insightWeatherResponse;
+    }
+
+    private static Sol extractSol(Object key, JSONObject obj)
+    {
+        JSONObject value = (JSONObject) obj.get(key);
+        JSONObject pre = (JSONObject) value.get("PRE");
+        PREValue[] preValues = {PREValue.av, PREValue.ct, PREValue.mn, PREValue.mx};
+        JSONObject wdMostCommon = (JSONObject) value.get("WD");
+
+        if (pre != null) {
+            preValues[0].setValue((double) pre.get("av"));
+            preValues[1].setValue((double) (long) pre.get("ct"));
+            preValues[2].setValue((double) pre.get("mn"));
+            preValues[3].setValue((double) pre.get("mx"));
+        }
+
+        return new Sol(key.toString(),
+                (String) value.get("First_UTC"),
+                (String) value.get("Last_UTC"),
+                (int) (long) value.get("Month_ordinal"),
+                (String) value.get("Northern_season"),
+                preValues,
+                (String) value.get("Season"),
+                (String) value.get("Southern_season"),
+                (String) wdMostCommon.get("most_common"));
     }
 
     private static ValidityCheck extractValidityCheck(JSONObject obj) {
         ValidityCheck validityCheck = new ValidityCheck();
         for (Object key : obj.keySet()) {
             switch (key.toString()) {
-                case "sol_hours_required":
-                    validityCheck.setSolHoursRequired((int)(long)obj.get(key));
-                    break;
-                case "sols_checked":
-                    validityCheck.setSolsChecked(JsonArrayToArray.convertToStringArray((JSONArray) obj.get(key)));
-                    break;
-                default:
-                    ValiditySol validitySol = new ValiditySol();
-                    validitySol.setSolKey(key.toString());
-                    JSONObject getPre = (JSONObject) ((JSONObject) obj.get(key)).getOrDefault("PRE", null);
-                    if (getPre != null) {
-                        Object valid = getPre.getOrDefault("valid", null);
-                        if (valid != null) {
-                            validitySol.setValid(Boolean.getBoolean(valid.toString()));
-                        }
-
-                        Object solHoursWithData = getPre.getOrDefault("sol_hours_with_data", null);
-                        if (solHoursWithData != null) {
-                            validitySol.setSolHoursWithData(JsonArrayToArray.convertToStringArray((JSONArray) solHoursWithData));
-                        }
-                    }
+                case "sol_hours_required" -> validityCheck.setSolHoursRequired((int) (long) obj.get(key));
+                case "sols_checked" -> validityCheck.setSolsChecked(JsonArrayToArray.convertToStringArray((JSONArray) obj.get(key)));
+                default -> validityCheck.addValiditySols(extractValiditySol(key, obj));
             }
         }
         return validityCheck;
+    }
+
+    private static ValiditySol extractValiditySol(Object key, JSONObject obj)
+    {
+        ValiditySol validitySol = new ValiditySol();
+        validitySol.setSolKey(key.toString());
+        JSONObject getPre = (JSONObject) ((JSONObject) obj.get(key)).get("PRE");
+        if (getPre != null) {
+            Object valid = getPre.get("valid");
+            if (valid != null) {
+                validitySol.setValid(Boolean.getBoolean(valid.toString()));
+            }
+
+            Object solHoursWithData = getPre.get("sol_hours_with_data");
+            if (solHoursWithData != null) {
+                validitySol.setSolHoursWithData(JsonArrayToArray.convertToStringArray((JSONArray) solHoursWithData));
+            }
+        }
+        return validitySol;
     }
 }
