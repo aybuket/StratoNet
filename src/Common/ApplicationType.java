@@ -1,7 +1,6 @@
 package Common;
 
-public enum ApplicationType
-{
-    Server,
-    Client
+public enum ApplicationType {
+    APOD,
+    INSIGHTWEATHER
 }

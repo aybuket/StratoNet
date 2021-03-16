@@ -1,12 +1,16 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import Common.ApodRequest;
+import Common.Request;
+import NasaConnection.NasaApodConnection;
+import Types.Apod;
+
+import java.io.*;
 import java.net.Socket;
 
 public class ServerConnection extends Thread{
     protected BufferedReader is;
     protected PrintWriter os;
+    protected ObjectInputStream objectInputStream;
+    protected ObjectOutputStream outputStream;
     protected Socket s;
     private String line = new String();
     private String lines = new String();
@@ -22,15 +26,33 @@ public class ServerConnection extends Thread{
         {
             is = new BufferedReader(new InputStreamReader(s.getInputStream()));
             os = new PrintWriter(s.getOutputStream());
+            objectInputStream = new ObjectInputStream(s.getInputStream());
+            outputStream = new ObjectOutputStream(s.getOutputStream());
         }
         catch (IOException e)
         {
             System.err.println("[ServerConnection]: Run. IO error in server thread");
+            e.printStackTrace();
         }
 
         try
         {
-            line = is.readLine();
+            //new NasaInsightWeatherConnection();
+            //new NasaApodConnection().downloadImage();
+            //System.out.println("End.");
+
+            Request request = (Request) objectInputStream.readObject();
+            if (request instanceof ApodRequest)
+            {
+                NasaApodConnection connection = new NasaApodConnection((ApodRequest)request);
+                connection.convertResponse();
+                Apod apodObject = connection.getApodObject();
+                outputStream.writeObject(apodObject.getHdurl());
+                outputStream.flush();
+                //os.println(apodObject.getHdurl());
+                //os.flush();
+            }
+            /*
             while (line.compareTo("QUIT") != 0)
             {
                 lines = "Client messaged : " + line + " at  : " + Thread.currentThread().getId();
@@ -39,6 +61,8 @@ public class ServerConnection extends Thread{
                 System.out.println("Client " + s.getRemoteSocketAddress() + " sent :  " + lines);
                 line = is.readLine();
             }
+            */
+
         }
         catch (IOException e)
         {
@@ -49,6 +73,8 @@ public class ServerConnection extends Thread{
         {
             line = this.getName();
             System.err.println("[ServerConnection]: Run.Client " + line + " Closed");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         } finally
         {
             connectionFinally();

@@ -1,7 +1,7 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import Common.Request;
+import Types.Apod;
+
+import java.io.*;
 import java.net.Socket;
 
 public class StratoNetClient {
@@ -11,7 +11,8 @@ public class StratoNetClient {
     private Socket s;
     protected BufferedReader is;
     protected PrintWriter os;
-
+    protected ObjectOutputStream outputStream;
+    protected ObjectInputStream inputStream;
     protected String serverAddress;
     protected int serverPort;
 
@@ -29,6 +30,8 @@ public class StratoNetClient {
             s=new Socket(serverAddress, serverPort);
             is = new BufferedReader(new InputStreamReader(s.getInputStream()));
             os = new PrintWriter(s.getOutputStream());
+            outputStream = new ObjectOutputStream(s.getOutputStream());
+            inputStream = new ObjectInputStream(s.getInputStream());
 
             System.out.println("[StratoNetClient.Connect]: Successfully connected to " + serverAddress + " on port " + serverPort);
         }
@@ -39,16 +42,17 @@ public class StratoNetClient {
         }
     }
 
-    public String SendForAnswer(String message)
+    public Object SendForAnswer(Request message)
     {
-        String response = new String();
+        Object response = null;
         try
         {
-            os.println(message);
-            os.flush();
-            response = is.readLine();
+            outputStream.writeObject(message);
+            outputStream.flush();
+            response = inputStream.readObject();
+            System.out.println(response);
         }
-        catch(IOException e)
+        catch(IOException | ClassNotFoundException e)
         {
             e.printStackTrace();
             System.out.println("[StratoNetClient.SendForAnswer]: Socket read Error");

@@ -1,5 +1,7 @@
 package NasaConnection;
 
+import Common.ApodRequest;
+import Types.Apod;
 import Utils.ConvertFromJson;
 
 import javax.imageio.ImageIO;
@@ -11,11 +13,17 @@ import java.net.http.HttpRequest;
 
 public class NasaApodConnection extends NasaConnection{
 
-    private Types.Apod apod;
+    private Apod apod;
     private static final String ApodAddress = "/planetary/apod";
+    private ApodRequest parameters = null;
 
     public NasaApodConnection() {
         super();
+    }
+
+    public NasaApodConnection(ApodRequest request) {
+        super();
+        parameters = request;
     }
 
     @Override
@@ -30,13 +38,36 @@ public class NasaApodConnection extends NasaConnection{
 
     @Override
     public void buildRequest() {
-        String apiAddress = NasaApiBaseAddress + ApodAddress + apiKeyString + apiKey;
+        String apiAddress = NasaApiBaseAddress + ApodAddress + apiKeyString + apiKey + buildParameters();
         request = HttpRequest.newBuilder(URI.create(apiAddress))
                 .header("accept", "application/json")
                 .GET()
                 .build();
     }
 
+    public String buildParameters(){
+        if (parameters != null) {
+            if (parameters.hasDate()) {
+                return "&date=" + parameters.getDate().dateFormat();
+            }
+
+            if (parameters.hasStartDate()) {
+                String payload = "&start_date=" + parameters.getStartDate().dateFormat();
+
+                if (parameters.hasEndDate()) {
+                    payload += "&end_date=" + parameters.getEndDate().dateFormat();
+                }
+
+                return payload;
+            }
+
+            if (parameters.hasCount()) {
+                return "&count=" + parameters.getCount();
+            }
+        }
+
+        return "";
+    }
 
     public Image downloadImage()
     {
@@ -48,5 +79,10 @@ public class NasaApodConnection extends NasaConnection{
             e.printStackTrace();
         }
         return image;
+    }
+
+    public Apod getApodObject()
+    {
+        return apod;
     }
 }

@@ -1,9 +1,12 @@
 package Common;
 
-public class Date {
+import java.io.Serializable;
+
+public class Date implements Serializable {
     private int year;
     private int month;
     private int day;
+    private static final Date firstPictureDay = new Date(1995,6,16);
 
     public Date(int year, int month, int day)
     {
@@ -12,9 +15,23 @@ public class Date {
         this.year = year;
     }
 
+    public Date(){
+
+    }
+
+    public static Date getFirstPictureDay()
+    {
+        return firstPictureDay;
+    }
+
     public String dateFormat()
     {
-        return year+"-"+month+"-"+day;
+        String formattedDate = year+"-";
+        formattedDate += (month < 10) ? "0" : "";
+        formattedDate += month + "-";
+        formattedDate += (day < 10) ? "0" : "";
+        formattedDate += day;
+        return formattedDate;
     }
 
     public boolean validateDate(Date minExpected)
@@ -55,5 +72,26 @@ public class Date {
 
     public int getDay() {
         return day;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
+    }
+
+    public void setMonth(int month) {
+        this.month = month;
+    }
+
+    public void setDay(int day) {
+        this.day = day;
+    }
+
+    @Override
+    public String toString() {
+        return "Date{" +
+                "year=" + year +
+                ", month=" + month +
+                ", day=" + day +
+                '}';
     }
 }

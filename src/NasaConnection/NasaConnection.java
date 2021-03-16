@@ -1,9 +1,7 @@
 package NasaConnection;
 
 import java.io.File;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.http.*;
 import java.util.Scanner;
 
 public abstract class NasaConnection {
@@ -33,7 +31,11 @@ public abstract class NasaConnection {
 
     public abstract void convertResponse();
     public abstract boolean validateParameters();
+    public abstract void buildRequest();
 
+    public int returnCode(){
+        return response.statusCode();
+    }
     public void sendSyncRequest(){
         try {
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -43,9 +45,6 @@ public abstract class NasaConnection {
             e.printStackTrace();
         }
     }
-
-    public abstract void buildRequest();
-
     private void readKey()
     {
         try
