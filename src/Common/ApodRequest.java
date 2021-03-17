@@ -6,12 +6,8 @@ public class ApodRequest extends Request{
     private Date endDate = null;
     private int count;
 
-    public ApodRequest(MessageType type) {
-        super(type);
-    }
-
-    public ApodRequest(MessageType type, String payload) {
-        super(type, payload);
+    public ApodRequest() {
+        super(RequestType.APOD);
     }
 
     public Date getDate() {

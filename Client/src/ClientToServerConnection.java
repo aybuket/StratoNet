@@ -1,64 +1,103 @@
-import Common.ApodRequest;
-import Common.Date;
-import Common.Request;
+import Common.*;
+import Types.Apod;
+import Types.PREValue;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Scanner;
-
-import static Common.MessageType.Auth_Request;
 
 public class ClientToServerConnection {
 
     private Scanner scanner;
-    private String message;
+    private String message = "";
     private StratoNetClient client;
+    private Phase phase;
+    private String token;
 
     public ClientToServerConnection(){
         client = new StratoNetClient(
                 StratoNetClient.DEFAULT_SERVER_ADDRESS,
                 StratoNetClient.DEFAULT_SERVER_PORT);
+        phase = Phase.INITIALIZATION;
     }
 
     public void start(){
         client.Connect();
         System.out.println("-----Welcome!-----");
         scanner = new Scanner(System.in);
-        authenticate();
-        chooseAPI();
-        while (!message.equals("QUIT"))
-        {
-            Request newRequest = null;
-            try {
-                if (message.equals("1")) {
-                    newRequest = useApodAPI();
-                } else {
-                    useInsightAPI();
-                }
-
-                System.out.println("Response from server: " + client.SendForAnswer(newRequest).toString());
+        while (!message.equals("QUIT")) {
+            switch (phase) {
+                case INITIALIZATION -> authenticate();
+                case QUERYING -> sendQuery();
+                case QUIT -> message = "QUIT";
+                default -> client.Disconnect();
             }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
-            chooseAPI();
         }
-
         client.Disconnect();
+    }
+
+    private void sendQuery() {
+        chooseAPI();
+        Request newRequest = null;
+        try {
+            if (message.equals("1")) {
+                newRequest = useApodAPI();
+                Apod apod = (Apod)client.SendObjectForAnswer(newRequest);
+                BufferedImage bimg = (BufferedImage) apod.downloadImage();
+                File imageFile = new File("Client/Downloads/Apod"+ apod.getDate()+".jpg");
+                imageFile.createNewFile();
+                ImageIO.write(bimg, "jpg" , imageFile);
+                System.out.println("Image is saved.");
+            } else {
+                newRequest = useInsightAPI();
+                PREValue pre = (PREValue) client.SendObjectForAnswer(newRequest);
+                System.out.println("PreValues are received for sol: "+ pre.getKey());
+                System.out.println(pre.toString());
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     public void disconnect(){
         client.Disconnect();
     }
 
-    private void authenticate()
-    {
-        System.out.println("Username: ");
-        message = scanner.nextLine();
-        System.out.println("You wrote: "+message);
+    private void authenticate() {
+        System.out.println("Initialization Phase.");
+        try {
+            System.out.println("Username: ");
+            String username = scanner.nextLine();
+            System.out.println("You wrote: " + username);
 
-        System.out.println("Password: ");
-        message = scanner.nextLine();
-        System.out.println("You wrote: "+message);
+            boolean isValid = client.sendCommandLine(Authentication.Auth_Request(username));
+            boolean isSuccess = false;
+            int count = 0;
+            while (isValid && !isSuccess && count < Authentication.getFailureLimit()) {
+                System.out.println("Password: ");
+                String password = scanner.nextLine();
+                isSuccess = client.sendCommandLine(Authentication.Auth_Request(password));
+                count++;
+            }
+
+            if (isSuccess) {
+                //client.authenticatedSocket();
+                phase = Phase.QUERYING;
+                System.out.println("Switching Querying Phase.");
+            }
+            else
+            {
+                phase = Phase.QUIT;
+                System.out.println("Switching Quitting Phase.");
+                client.Disconnect();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void chooseAPI()
@@ -78,7 +117,7 @@ public class ClientToServerConnection {
 
     private ApodRequest useApodAPI() throws Exception
     {
-        ApodRequest requestParameters = new ApodRequest(Auth_Request);
+        ApodRequest requestParameters = new ApodRequest();
         String parameterString = "Optional parameters. Choose number or ENTER. \n" +
                 "[1] date: YYYY-MM-DD\n" +
                 "[2] start date: YYYY-MM-DD (and end date: YYYY-MM-DD)\n" +
@@ -120,9 +159,9 @@ public class ClientToServerConnection {
         return requestParameters;
     }
 
-    private static void useInsightAPI()
+    private InsightWeatherRequest useInsightAPI()
     {
-
+        return new InsightWeatherRequest();
     }
 
     private Date getDate() throws Exception

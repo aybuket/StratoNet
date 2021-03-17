@@ -1,21 +1,25 @@
+import Common.Authentication;
 import Common.Request;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class StratoNetClient {
 
     public static final String DEFAULT_SERVER_ADDRESS = "localhost";
     public static final int DEFAULT_SERVER_PORT = 4444;
-    private Socket s;
-    protected BufferedReader is;
-    protected PrintWriter os;
-    protected ObjectOutputStream outputStream;
-    protected ObjectInputStream inputStream;
+    private Socket socket;
+    private Socket authenticatedSocket;
+    private int authenticatedPort;
+    protected DataInputStream dataInputStream;
+    protected DataOutputStream dataOutputStream;
+    protected ObjectOutputStream objectOutputStream;
+    protected ObjectInputStream objectInputStream;
+    protected InputStream in;
+    protected OutputStream out;
     protected String serverAddress;
     protected int serverPort;
-    protected int filePort;
-
 
     public StratoNetClient(String address, int port)
     {
@@ -27,12 +31,11 @@ public class StratoNetClient {
     {
         try
         {
-            s=new Socket(serverAddress, serverPort);
-            is = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            os = new PrintWriter(s.getOutputStream());
-            outputStream = new ObjectOutputStream(s.getOutputStream());
-            inputStream = new ObjectInputStream(s.getInputStream());
-
+            socket =new Socket(serverAddress, serverPort);
+            in = socket.getInputStream();
+            out = socket.getOutputStream();
+            dataInputStream = new DataInputStream(in);
+            dataOutputStream = new DataOutputStream(out);
             System.out.println("[StratoNetClient.Connect]: Successfully connected to " + serverAddress + " on port " + serverPort);
         }
         catch (IOException e)
@@ -42,15 +45,18 @@ public class StratoNetClient {
         }
     }
 
-    public Object SendForAnswer(Request message)
+    public Object SendObjectForAnswer(Request message) throws IOException
     {
+        objectOutputStream = new ObjectOutputStream(out);
+        objectOutputStream.flush();
+        objectInputStream = new ObjectInputStream(in);
         Object response = null;
         try
         {
-            outputStream.writeObject(message);
-            outputStream.flush();
-            response = inputStream.readObject();
-            System.out.println(response);
+            objectOutputStream.writeObject(message);
+            objectOutputStream.flush();
+            response = objectInputStream.readObject();
+            //System.out.println(response);
         }
         catch(IOException | ClassNotFoundException e)
         {
@@ -64,9 +70,23 @@ public class StratoNetClient {
     {
         try
         {
-            is.close();
-            os.close();
-            s.close();
+            if (dataInputStream != null)
+            {
+                dataInputStream.close();
+            }
+            if (dataOutputStream != null)
+            {
+                dataOutputStream.close();
+            }
+            if (objectInputStream != null)
+            {
+                objectInputStream.close();
+            }
+            if (objectOutputStream != null)
+            {
+                objectOutputStream.close();
+            }
+            socket.close();
             System.out.println("[StratoNetClient.Disconnect]: Connection Closed");
         }
         catch (IOException e)
@@ -75,8 +95,38 @@ public class StratoNetClient {
         }
     }
 
-    public void addFilePort(int port)
-    {
-        this.filePort = port;
+    public void authenticatedSocket() throws IOException {
+        //authenticatedSocket = new Socket(serverAddress, authenticatedPort);
+        objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+        objectInputStream = new ObjectInputStream(socket.getInputStream());
+    }
+
+    public boolean sendCommandLine(byte[] auth_request) throws IOException{
+        dataOutputStream.write(auth_request);
+        dataOutputStream.flush();
+
+        int wholeSize = dataInputStream.available();
+        while (wholeSize < 1)
+        {
+            wholeSize = dataInputStream.available();
+        }
+        byte[] data = new byte[wholeSize];
+        dataInputStream.readFully(data);
+        byte[] header = Arrays.copyOfRange(data, 0,6);
+        int size = Authentication.checkAuthHeader(header);
+        if (size == -1)
+        {
+            System.out.println("Failed");
+            return false;
+        }
+        System.out.println("Succeded.");
+        if (size > 0)
+        {
+            data = Arrays.copyOfRange(data, 6,6+size);
+            authenticatedPort = Integer.parseInt(new String(data));
+            System.out.println("Authenticated.");
+        }
+
+        return true;
     }
 }

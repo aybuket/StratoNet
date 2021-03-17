@@ -1,5 +1,6 @@
 package NasaConnection;
 
+import Types.InsightWeather;
 import Utils.ConvertFromJson;
 
 import java.net.URI;
@@ -21,16 +22,22 @@ public class NasaInsightWeatherConnection extends NasaConnection{
     }
 
     @Override
-    public void buildRequest() {
+    public NasaConnection buildRequest() {
         String apiAddress = NasaApiBaseAddress + InsightWeatherAddress + apiKeyString + apiKey + feedType + version;
         request = HttpRequest.newBuilder(URI.create(apiAddress))
                 .header("accept", "application/json")
                 .GET()
                 .build();
+        return this;
     }
 
     @Override
     public void convertResponse() {
         insightWeather = ConvertFromJson.convertInsightWeatherResponse(response);
+    }
+
+    public InsightWeather getInsideWeatherObject()
+    {
+        return insightWeather;
     }
 }

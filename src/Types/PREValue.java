@@ -1,18 +1,63 @@
 package Types;
 
-public enum PREValue {
-    av,
-    ct,
-    mn,
-    mx;
+import java.io.Serializable;
 
-    private double value;
+public class PREValue implements Serializable {
+    private double av;
+    private double ct;
+    private double mn;
+    private double mx;
+    private String key;
 
-    public double getValue() {
-        return value;
+    public double getAv() {
+        return av;
     }
 
-    public void setValue(double value) {
-        this.value = value;
+    public void setAv(double av) {
+        this.av = av;
+    }
+
+    public double getCt() {
+        return ct;
+    }
+
+    public void setCt(double ct) {
+        this.ct = ct;
+    }
+
+    public double getMn() {
+        return mn;
+    }
+
+    public void setMn(double mn) {
+        this.mn = mn;
+    }
+
+    public double getMx() {
+        return mx;
+    }
+
+    public void setMx(double mx) {
+        this.mx = mx;
+    }
+
+    public void setKey(String key)
+    {
+        this.key = key;
+    }
+
+    public String getKey()
+    {
+        return key;
+    }
+
+    @Override
+    public String toString() {
+        return "PREValue{" +
+                "av=" + av +
+                ", ct=" + ct +
+                ", mn=" + mn +
+                ", mx=" + mx +
+                '}';
     }
 }

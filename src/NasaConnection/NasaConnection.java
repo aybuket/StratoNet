@@ -31,7 +31,7 @@ public abstract class NasaConnection {
 
     public abstract void convertResponse();
     public abstract boolean validateParameters();
-    public abstract void buildRequest();
+    public abstract NasaConnection buildRequest();
 
     public int returnCode(){
         return response.statusCode();

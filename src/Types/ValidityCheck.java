@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class ValidityCheck {
     private int solHoursRequired;
-    private ArrayList<ValiditySol> validitySols;
+    private ArrayList<ValiditySol> validitySols = new ArrayList<ValiditySol>();
     private String[] solsChecked = null;
 
     public int getSolHoursRequired() {

@@ -48,14 +48,15 @@ public class ConvertFromJson {
     {
         JSONObject value = (JSONObject) obj.get(key);
         JSONObject pre = (JSONObject) value.get("PRE");
-        PREValue[] preValues = {PREValue.av, PREValue.ct, PREValue.mn, PREValue.mx};
+        PREValue preValue = new PREValue();
         JSONObject wdMostCommon = (JSONObject) value.get("WD");
 
         if (pre != null) {
-            preValues[0].setValue((double) pre.get("av"));
-            preValues[1].setValue((double) (long) pre.get("ct"));
-            preValues[2].setValue((double) pre.get("mn"));
-            preValues[3].setValue((double) pre.get("mx"));
+            preValue.setAv((double) pre.get("av"));
+            preValue.setCt((double) (long) pre.get("ct"));
+            preValue.setMn((double) pre.get("mn"));
+            preValue.setMx((double) pre.get("mx"));
+            preValue.setKey(key.toString());
         }
 
         return new Sol(key.toString(),
@@ -63,7 +64,7 @@ public class ConvertFromJson {
                 (String) value.get("Last_UTC"),
                 (int) (long) value.get("Month_ordinal"),
                 (String) value.get("Northern_season"),
-                preValues,
+                preValue,
                 (String) value.get("Season"),
                 (String) value.get("Southern_season"),
                 (String) wdMostCommon.get("most_common"));

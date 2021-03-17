@@ -4,19 +4,14 @@ import java.io.Serializable;
 
 public class Request implements Serializable {
 
-
-
-    private MessageType type;
-    private String payload;
-
-    public Request(MessageType type)
+    private final RequestType type;
+    public Request(RequestType type)
     {
         this.type = type;
     }
 
-    public Request(MessageType type, String payload)
+    public RequestType getType()
     {
-        this.type = type;
-        this.payload = payload;
+        return type;
     }
 }

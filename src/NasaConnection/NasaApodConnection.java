@@ -4,11 +4,7 @@ import Common.ApodRequest;
 import Types.Apod;
 import Utils.ConvertFromJson;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpRequest;
 
 public class NasaApodConnection extends NasaConnection{
@@ -19,11 +15,6 @@ public class NasaApodConnection extends NasaConnection{
 
     public NasaApodConnection() {
         super();
-    }
-
-    public NasaApodConnection(ApodRequest request) {
-        super();
-        parameters = request;
     }
 
     @Override
@@ -37,12 +28,17 @@ public class NasaApodConnection extends NasaConnection{
     }
 
     @Override
-    public void buildRequest() {
+    public NasaConnection buildRequest() {
         String apiAddress = NasaApiBaseAddress + ApodAddress + apiKeyString + apiKey + buildParameters();
         request = HttpRequest.newBuilder(URI.create(apiAddress))
                 .header("accept", "application/json")
                 .GET()
                 .build();
+        return this;
+    }
+
+    public void setParameters(ApodRequest request) {
+        this.parameters = request;
     }
 
     public String buildParameters(){
@@ -67,18 +63,6 @@ public class NasaApodConnection extends NasaConnection{
         }
 
         return "";
-    }
-
-    public Image downloadImage()
-    {
-        Image image = null;
-        try {
-            URL url = new URL(apod.getHdurl());
-            image = ImageIO.read(url);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return image;
     }
 
     public Apod getApodObject()

@@ -1,10 +1,14 @@
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class StratoNetServer {
 
     protected ServerSocket serverSocket;
+    protected ServerSocket authenticatedServerSocket;
     public static final int DEFAULT_SERVER_PORT = 4444;
+    public static int NEW_SERVER_PORT;
 
     public StratoNetServer(int port)
     {
@@ -12,6 +16,8 @@ public class StratoNetServer {
         {
             serverSocket = new ServerSocket(port);
             System.out.println("[StratoNetServer]: Opened up a server socket on " + Inet4Address.getLocalHost());
+            //NEW_SERVER_PORT = 5000+new Random().nextInt(1000);
+            //authenticatedServerSocket = new ServerSocket(NEW_SERVER_PORT);
         }
         catch (IOException e)
         {

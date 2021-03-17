@@ -6,7 +6,7 @@ public class Sol {
     private String lastUTC = null;
     private int monthOrdinal = 0;
     private String northernSeason = null;
-    private PREValue[] pre = null;
+    private PREValue pre = null;
     private String season = null;
     private String southernSeason = null;
     private String wdMostCommon = null;
@@ -16,7 +16,7 @@ public class Sol {
                String lastUTC,
                int monthOrdinal,
                String northernSeason,
-               PREValue[] pre,
+               PREValue pre,
                String season,
                String southernSeason,
                String wdMostCommon) {
@@ -71,11 +71,11 @@ public class Sol {
         this.northernSeason = northernSeason;
     }
 
-    public PREValue[] getPre() {
+    public PREValue getPre() {
         return pre;
     }
 
-    public void setPre(PREValue[] pre) {
+    public void setPre(PREValue pre) {
         this.pre = pre;
     }
 

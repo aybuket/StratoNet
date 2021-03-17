@@ -1,161 +1,213 @@
-import Common.ApodRequest;
-import Common.ApplicationType;
-import Common.Authentication;
-import Common.Request;
+import Common.*;
 import NasaConnection.NasaApodConnection;
+import NasaConnection.NasaInsightWeatherConnection;
 import Types.Apod;
+import Types.InsightWeather;
+import Types.Sol;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Random;
 
-public class ServerThread extends Thread{
+public class ServerThread extends Thread {
     protected DataInputStream dataInputStream;
     protected DataOutputStream dataOutputStream;
     protected ObjectInputStream objectInputStream;
     protected ObjectOutputStream objectOutputStream;
-    protected Socket s;
-    private String line = "";
-    private String lines = "";
+    protected InputStream in;
+    protected OutputStream out;
+    protected Socket socket;
+    protected Socket authenticatedSocket;
+    protected int authenticatedPort;
+    protected Phase phase;
+    protected AuthenticationInfo info;
 
     public ServerThread(Socket s)
     {
-        this.s = s;
+        this.socket = s;
+        this.phase = Phase.INITIALIZATION;
     }
 
-    public void run()
-    {
-        try
-        {
-            dataInputStream = new DataInputStream(s.getInputStream());
-            dataOutputStream = new DataOutputStream(s.getOutputStream());
-        }
-        catch (IOException e)
-        {
+    public void run() {
+        try {
+            in = socket.getInputStream();
+            out = socket.getOutputStream();
+            dataInputStream = new DataInputStream(in);
+            dataOutputStream = new DataOutputStream(out);
+        } catch (IOException e) {
             System.err.println("[ServerConnection]: Run. IO error in server thread");
             e.printStackTrace();
         }
 
-        try
-        {
-            authenticate();
-            Request request = (Request) objectInputStream.readObject();
-            if (request instanceof ApodRequest)
+        try {
+            while (!phase.equals(Phase.QUIT))
             {
-                NasaApodConnection connection = new NasaApodConnection((ApodRequest)request);
-                connection.convertResponse();
-                Apod apodObject = connection.getApodObject();
-                objectOutputStream.writeObject(apodObject.getHdurl());
-                objectOutputStream.flush();
-                //os.println(apodObject.getHdurl());
-                //os.flush();
+                switch (phase)
+                {
+                    case INITIALIZATION -> authenticate();
+                    case QUERYING -> acceptQuery();
+                    default -> connectionFinally();
+                }
             }
-            /*
-            while (line.compareTo("QUIT") != 0)
-            {
-                lines = "Client messaged : " + line + " at  : " + Thread.currentThread().getId();
-                os.println(lines);
-                os.flush();
-                System.out.println("Client " + s.getRemoteSocketAddress() + " sent :  " + lines);
-                line = is.readLine();
-            }
-            */
 
-        }
-        catch (IOException e)
-        {
-            line = this.getName();
-            System.err.println("[ServerConnection]: Run. IO Error/ Client " + line + " terminated abruptly");
-        }
-        catch (NullPointerException e)
-        {
-            line = this.getName();
-            System.err.println("[ServerConnection]: Run.Client " + line + " Closed");
+        } catch (IOException e) {
+            System.err.println("[ServerConnection]: Run. IO Error/ Client " + this.getName() + " terminated abruptly");
+        } catch (NullPointerException e) {
+            System.err.println("[ServerConnection]: Run.Client " + this.getName() + " Closed");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        } finally
-        {
+        } finally {
             connectionFinally();
-        }
-    }
-
-    private void connectionFinally()
-    {
-        try
-        {
-            System.out.println("[ServerConnection]: Closing the connection");
-            if (dataInputStream != null)
-            {
-                dataInputStream.close();
-                System.err.println("[ServerConnection]: Socket Input Stream Closed");
-            }
-
-            if (dataOutputStream != null)
-            {
-                dataOutputStream.close();
-                System.err.println("[ServerConnection]: Socket Out Closed");
-            }
-            if (s != null)
-            {
-                s.close();
-                System.err.println("[ServerConnection]: Socket Closed");
-            }
-
-        }
-        catch (IOException ie)
-        {
-            System.err.println("[ServerConnection]: Socket Close Error");
         }
     }
 
     private void authenticate(){
+        System.out.println("Authentication Phase.");
         try {
-            String username = new String(dataInputStream.readAllBytes(), StandardCharsets.UTF_8);
-            Authentication authentication = new Authentication(ApplicationType.SERVER);
-            if (authentication.checkUsername(username)) {
-                sendToClientCommandLine(authentication.Auth_Fail_User());
+            int wholeSize = dataInputStream.available();
+            while (wholeSize < 1)
+            {
+                wholeSize = dataInputStream.available();
+            }
+            byte[] data = new byte[wholeSize];
+            dataInputStream.readFully(data);
+            System.out.println(data);
+            byte[] header = Arrays.copyOfRange(data, 0,6);
+            int size = Authentication.checkAuthRequestHeader(header);
+            String username = "";
+            if (size != -1)
+            {
+                data = Arrays.copyOfRange(data, 6,6+size);
+                username = new String(data, StandardCharsets.UTF_8);
+            }
+            if (size == -1 || !Authentication.checkUsername(username)) {
+                System.out.println("User does not exist.");
+                sendToClientCommandLine(Authentication.Auth_Fail_User());
+                phase = Phase.QUIT;
                 connectionFinally();
                 return;
             }
 
-            sendToClientCommandLine(authentication.Auth_Challenge_Password());
-            this.s.setSoTimeout(15000);
+            sendToClientCommandLine(Authentication.Auth_Challenge_Password());
 
             boolean passwordCheck = false;
-            while (!passwordCheck && authentication.getFailureCount() < authentication.getFailureLimit())
+            int failureCount = 0;
+            while (!passwordCheck && failureCount < Authentication.getFailureLimit())
             {
-                String password = new String(dataInputStream.readAllBytes(), StandardCharsets.UTF_8);
-                passwordCheck = authentication.checkPassword(username, password);
+                wholeSize = dataInputStream.available();
+                while (wholeSize < 1)
+                {
+                    wholeSize = dataInputStream.available();
+                }
+                data = new byte[wholeSize];
+                dataInputStream.readFully(data);
+                header = Arrays.copyOfRange(data, 0,6);
+                size = Authentication.checkAuthRequestHeader(header);
+                String password = "";
+                if (size != -1)
+                {
+                    data = Arrays.copyOfRange(data, 6,6+size);
+                    password = new String(data, StandardCharsets.UTF_8);
+                }
+                passwordCheck = Authentication.checkPassword(username, password);
                 if (!passwordCheck)
                 {
-                    sendToClientCommandLine(authentication.Auth_Fail_Password());
+                    sendToClientCommandLine(Authentication.Auth_Fail_Password());
+                    failureCount++;
                 }
             }
-            this.s.setSoTimeout(0);
 
             if(!passwordCheck)
             {
-                sendToClientCommandLine(authentication.Auth_Fail_Timeout());
+                sendToClientCommandLine(Authentication.Auth_Fail_Timeout());
+                phase = Phase.QUIT;
                 connectionFinally();
                 return;
             }
 
+            //int port = newPortSocket();
+            sendToClientCommandLine(Authentication.Auth_Success(StratoNetServer.DEFAULT_SERVER_PORT));
+            //authenticatedStreams();
+            phase = Phase.QUERYING;
+
         } catch (SocketTimeoutException timeoutException)
         {
-            line = this.getName();
-            System.err.println("[ServerConnection]: Run. Timeout " + line + " terminated abruptly");
+            System.err.println("[ServerConnection]: Run. Timeout " + this.getName() + " terminated abruptly");
             connectionFinally();
         } catch (IOException e)
         {
-            line = this.getName();
-            System.err.println("[ServerConnection]: Run. IO Error/ Client " + line + " terminated abruptly");
+            System.err.println("[ServerConnection]: Run. IO Error/ Client " + this.getName() + " terminated abruptly");
         }
     }
 
+    private void acceptQuery() throws IOException, ClassNotFoundException
+    {
+        objectInputStream = new ObjectInputStream(in);
+        objectOutputStream = new ObjectOutputStream(out);
+        Request request = (Request) objectInputStream.readObject();
+        if (request.getType().equals(RequestType.APOD)) {
+            NasaApodConnection connection = new NasaApodConnection();
+            connection.setParameters((ApodRequest) request);
+            connection.buildRequest().sendSyncRequest();
+            connection.convertResponse();
+            Apod apodObject = connection.getApodObject();
+            objectOutputStream.writeObject(apodObject);
+            objectOutputStream.flush();
+        }
+        else if (request.getType().equals(RequestType.INSIGHT_WEATHER))
+        {
+            NasaInsightWeatherConnection connection = new NasaInsightWeatherConnection();
+            connection.buildRequest().sendSyncRequest();
+            connection.convertResponse();
+            InsightWeather insightWeatherObject = connection.getInsideWeatherObject();
+            int randomKeyIndex = new Random().nextInt(insightWeatherObject.getSolKeys().length);
+            Sol randomSol = insightWeatherObject.getSols().get(insightWeatherObject.getSolKeys()[randomKeyIndex]);
+            objectOutputStream.writeObject(randomSol.getPre());
+            objectOutputStream.flush();
+        }
+        else {
+            phase = Phase.QUIT;
+        }
+
+    }
     private void sendToClientCommandLine(byte[] obj) throws IOException
     {
         dataOutputStream.write(obj);
         dataOutputStream.flush();
+    }
+
+    private void connectionFinally() {
+        try {
+            System.out.println("[ServerThread]: Closing the connection");
+            if (dataInputStream != null) {
+                dataInputStream.close();
+                System.err.println("[ServerThread]: Socket Data Input Stream Closed");
+            }
+
+            if (objectInputStream != null) {
+                objectInputStream.close();
+                System.err.println("[ServerThread]: Socket Object Input Stream Closed");
+            }
+
+            if (dataOutputStream != null) {
+                dataOutputStream.close();
+                System.err.println("[ServerThread]: Socket Data Output Stream Closed");
+            }
+
+            if (objectOutputStream != null) {
+                objectOutputStream.close();
+                System.err.println("[ServerThread]: Socket Object Output Stream Closed");
+            }
+
+            if (socket != null) {
+                socket.close();
+                System.err.println("[ServerThread]: Socket Closed");
+            }
+        } catch (IOException ie) {
+            System.err.println("[ServerThread]: Socket Close Error");
+        }
     }
 }

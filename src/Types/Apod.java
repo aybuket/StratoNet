@@ -1,6 +1,12 @@
 package Types;
 
-public class Apod {
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.io.IOException;
+import java.io.Serializable;
+import java.net.URL;
+
+public class Apod implements Serializable {
 
     private String copyright = null;
     private String date = null;
@@ -102,5 +108,17 @@ public class Apod {
                 "Title: "+getTitle()+"\n"+
                 "URL: "+getUrl()+"\n";
         return result;
+    }
+
+    public Image downloadImage() throws NullPointerException
+    {
+        Image image = null;
+        try {
+            URL url = new URL(this.getUrl());
+            image = ImageIO.read(url);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return image;
     }
 }
